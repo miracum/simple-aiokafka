@@ -1,0 +1,8 @@
+-r requirements.txt
+python-dotenv
+black
+flake8
+pycodestyle
+pyflakes
+pre-commit
+flake8-bugbear
