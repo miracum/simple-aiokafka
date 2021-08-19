@@ -7,10 +7,7 @@ It provides a convenient interface for Kafka Consumer, Producer and Processors.
 
 Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processor and start processing:
 
-~~~python
-~~~
-
-#### Consumer
+### Consumer
 ~~~python
 from aiokafka_handler.kafka_handler import AIOKafkaHandler
 
@@ -20,7 +17,7 @@ async for msg in kh.consumer:
     print(msg)
 ~~~
 
-#### Producer
+### Producer
 
 ~~~python
 from aiokafka_handler.kafka_handler import AIOKafkaHandler
@@ -49,7 +46,7 @@ await kh.init_producer("dummy_topic")
 await kh.produce(generate_message())
 ~~~
 
-#### Processor
+### Processor
 ~~~python
 from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
 def process_message(msg: ConsumerRecord):
@@ -63,7 +60,6 @@ await kh.process(process_message)
 
 
 ## Decorator Style API
-
 ~~~python
 from typing import Tuple
 from aiokafka_handler.kafka_handler import (
@@ -86,10 +82,11 @@ async def produce() -> Tuple[str, str]:
         await asyncio.sleep(1)
 ~~~
 
-For a full example see [example-decorators.py]()
+For a full example see [example-decorators.py](example_decorators.py).
 
 ### Configure
-Set your variables via `export` or in your `.env` file:
+Set your variables via `export` or in your `.env` file.
+For all options see [aiokafka_handler/kafka_settings.py](aiokafka_handler/kafka_settings.py).
 
 ~~~bash
 # Kafka settings

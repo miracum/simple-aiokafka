@@ -8,6 +8,7 @@ from aiokafka_handler.kafka_handler import kafka_processor, ConsumerRecord
 async def consume(msg: ConsumerRecord = None) -> None:
     print("Consume Message:", msg)
 
+
 @kafka_processor(input_topic="producer_topic", output_topic="processor_topic")
 async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
     return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
@@ -19,10 +20,12 @@ async def produce() -> Tuple[str, str]:
         yield str(i), f"Message {i}"
         await asyncio.sleep(1)
 
+
 async def main():
     asyncio.create_task(produce())
     asyncio.create_task(process())
     await consume()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

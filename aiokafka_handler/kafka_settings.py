@@ -24,7 +24,7 @@ class KafkaProducerSettings(BaseSettings):
 
 
 class KafkaSettings(BaseSettings):
-    log_level: str = "info"
+    log_level: str = "warning"
     consumer = KafkaConsumerSettings()
     producer = KafkaProducerSettings()
     group_id: str = "aiokafka"

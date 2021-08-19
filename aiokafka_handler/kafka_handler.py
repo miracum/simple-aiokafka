@@ -47,23 +47,20 @@ class AIOKafkaHandler:
 
     async def send(self, data: Tuple[str, str]):
         """Encode data to utf-8 and send it to the producer"""
-        key = data[0].encode("utf-8") if data[1] else None
-        value = data[1].encode("utf-8")
-        await self.producer.send_and_wait(self.conf.output_topic, value, key)
+        try:
+            key = data[0].encode("utf-8") if data[1] else None
+            value = data[1].encode("utf-8")
+            try:
+                await self.producer.send_and_wait(self.conf.output_topic, value, key)
+            except Exception as err:
+                log.exception(err)
+        except Exception as err:
+            log.error(f"Cannot format message to bytes: {data}")
+            log.error(repr(err))
 
     async def produce(self, iterable: AsyncIterable):
         async for data in iterable:
             await self.send(data)
-
-    async def processor_task(self, func: Callable):
-        self.consumer_task = asyncio.create_task(self.process(func))
-        return self.consumer_task
-
-    async def start_processor(self, func: Callable) -> asyncio.Task:
-        # await asyncio.create_task(self.init_consumer())
-        await self.init_producer()
-        task = await self.process(func)
-        return task
 
     async def stop_consuming(self):
         self.consumer_task.cancel()
@@ -76,16 +73,15 @@ class AIOKafkaHandler:
         # consume messages
         msg: ConsumerRecord
         async for msg in self.consumer:
-            log.debug(f"Consuming message: {msg}")
-            log.info(f"Received message: {msg.key}")
+            log.debug(f"Received message: {msg.key}")
             try:
                 result: Tuple[str, str] = func(msg)
                 await self.send(result)
-                log.info(f"Sent message: {msg.key}")
+                log.debug(f"Sent message: {msg.key}")
             except Exception as err:
                 log.exception(err)
                 try:
-                    await self.producer.send_and_wait(failed_topic, msg.value)
+                    await self.producer.send_and_wait(failed_topic, msg.value, msg.key)
                 except Exception as error_topic_exc:
                     log.exception(error_topic_exc)
 
