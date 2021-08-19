@@ -5,7 +5,8 @@ It provides a convenient interface for Kafka Consumer, Producer and Processors.
 
 ## Classic API
 
-Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processor and start processing:
+Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processor and start processing!
+For a full example see [example_classic.py](example_classic.py).
 
 ### Consumer
 ~~~python
@@ -82,7 +83,7 @@ async def produce() -> Tuple[str, str]:
         await asyncio.sleep(1)
 ~~~
 
-For a full example see [example-decorators.py](example_decorators.py).
+For a full example see [example_decorators.py](example_decorators.py).
 
 ### Configure
 Set your variables via `export` or in your `.env` file.
