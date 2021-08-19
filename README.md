@@ -8,13 +8,13 @@ It provides a convenient interface for Kafka Consumer, Producer and Processors.
 Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processor and start processing:
 
 ~~~python
-from aiokafka_handler.kafka_handler import AIOKafkaHandler
-
-kh = AIOKafkaHandler()
 ~~~
 
 #### Consumer
 ~~~python
+from aiokafka_handler.kafka_handler import AIOKafkaHandler
+
+kh = AIOKafkaHandler()
 await kh.init_consumer()
 async for msg in kh.consumer:
     print(msg)
@@ -23,14 +23,20 @@ async for msg in kh.consumer:
 #### Producer
 
 ~~~python
+from aiokafka_handler.kafka_handler import AIOKafkaHandler
+
+kh = AIOKafkaHandler()
 await kh.init_producer()
 for i in range(10):
     kh.send(data=(str(i), "Value"))
 ~~~
 
-or pass an AsyncIterator object to `AioKafkaHandler.produce` :
-
+or pass an __AsyncIterator__ object to `AioKafkaHandler.produce`:
 ~~~python
+import asyncio
+from typing import Tuple, AsyncIterator
+from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+
 async def generate_message() -> AsyncIterator[Tuple[str, str]]:
     n = 0
     while True:
@@ -38,16 +44,28 @@ async def generate_message() -> AsyncIterator[Tuple[str, str]]:
         n += 1
         await asyncio.sleep(1)
 
+kh = AIOKafkaHandler()
 await kh.init_producer("dummy_topic")
-await producer.produce(generate_message())
+await kh.produce(generate_message())
+~~~
+
+#### Processor
+~~~python
+from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+def process_message(msg: ConsumerRecord):
+    return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
+
+kh = AIOKafkaHandler()
+await kh.init_consumer("dummy_topic")
+await kh.init_producer("dummy_output_topic")
+await kh.process(process_message)
 ~~~
 
 
-#### Processor
-
-Or use the Decorator-style API:
+## Decorator Style API
 
 ~~~python
+from typing import Tuple
 from aiokafka_handler.kafka_handler import (
     kafka_consumer, kafka_producer, kafka_processor, ConsumerRecord
 )
