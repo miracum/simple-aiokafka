@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from typing import Callable, Tuple, Iterable, AsyncIterable
+from typing import Callable, Tuple, AsyncIterable
 import aiokafka
 import logging
 from aiokafka.structs import ConsumerRecord
@@ -8,15 +8,16 @@ from aiokafka_handler.kafka_settings import KafkaSettings
 
 log = logging.getLogger()
 
+
 class AIOKafkaHandler:
     def __init__(self):
         self.conf = KafkaSettings()
         self.consumer_task: asyncio.Task = None
         self.consumer: aiokafka.AIOKafkaConsumer = None
         self.producer: aiokafka.AIOKafkaProducer = None
-        logging.basicConfig(
-            level=logging.getLevelName(self.conf.log_level.upper())
-        )
+
+        # Set logging level from config variable 'kafka_log_level'
+        logging.basicConfig(level=logging.getLevelName(self.conf.log_level.upper()))
 
     async def init_producer(self, output_topic: str = None):
         """Initiate AIOKafkaProducer instance with pydantic settings"""
@@ -29,7 +30,7 @@ class AIOKafkaHandler:
             **self.conf.producer.dict(),
         )
         await self.producer.start()
-        log.info(f"Init Kafka Producer: {self.conf.output_topic}")
+        log.info(f"Initiated Kafka Producer: {self.conf.output_topic}")
 
     async def init_consumer(self, input_topic: str = None):
         """Initiate AIOKafkaConsumer instance with pydantic settings"""
@@ -42,12 +43,12 @@ class AIOKafkaHandler:
             **self.conf.consumer.dict(),
         )
         await self.consumer.start()
-        log.info(f"Init Kafka Consumer: {self.conf.input_topic}")
+        log.info(f"Initiated Kafka Consumer: {self.conf.input_topic}")
 
     async def send(self, data: Tuple[str, str]):
         """Encode data to utf-8 and send it to the producer"""
-        key = data[0].encode('utf-8') if data[1] else None
-        value = data[1].encode('utf-8')
+        key = data[0].encode("utf-8") if data[1] else None
+        value = data[1].encode("utf-8")
         await self.producer.send_and_wait(self.conf.output_topic, value, key)
 
     async def produce(self, iterable: AsyncIterable):
@@ -101,12 +102,13 @@ def kafka_consumer(input_topic: str = None) -> Callable:
             async for msg in kh.consumer:
                 await func(msg)
             return await kh.consumer.stop()
+
         return wrapped
+
     return wrapper
 
-def kafka_processor(
-        input_topic: str = None, output_topic: str = None
-) -> Callable:
+
+def kafka_processor(input_topic: str = None, output_topic: str = None) -> Callable:
     def wrapper(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapped(*args):
@@ -117,8 +119,11 @@ def kafka_processor(
                 data = await func(msg)
                 await kh.send(data=data)
             return await kh.consumer.stop()
+
         return wrapped
+
     return wrapper
+
 
 def kafka_producer(output_topic: str = None) -> Callable:
     def wrapper(func: Callable) -> Callable:
@@ -127,7 +132,7 @@ def kafka_producer(output_topic: str = None) -> Callable:
             kh = AIOKafkaHandler()
             await kh.init_producer(output_topic)
             await kh.produce(func())
-            # async for msg in func():
-            #     await kh.send(data=msg)
+
         return wrapped
+
     return wrapper

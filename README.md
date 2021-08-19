@@ -7,26 +7,39 @@ It provides a convenient interface for Kafka Consumer, Producer and Processors.
 
 Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processor and start processing:
 
-#### Consumer
 ~~~python
 from aiokafka_handler.kafka_handler import AIOKafkaHandler
 
 kh = AIOKafkaHandler()
+~~~
+
+#### Consumer
+~~~python
 await kh.init_consumer()
 async for msg in kh.consumer:
     print(msg)
-
 ~~~
 
 #### Producer
 
 ~~~python
-from aiokafka_handler.kafka_handler import AIOKafkaHandler
-
-kh = AIOKafkaHandler()
-await kh.init_consumer()
+await kh.init_producer()
 for i in range(10):
     kh.send(data=(str(i), "Value"))
+~~~
+
+or pass an AsyncIterator object to `AioKafkaHandler.produce` :
+
+~~~python
+async def generate_message() -> AsyncIterator[Tuple[str, str]]:
+    n = 0
+    while True:
+        yield str(n), f"Message {n}"
+        n += 1
+        await asyncio.sleep(1)
+
+await kh.init_producer("dummy_topic")
+await producer.produce(generate_message())
 ~~~
 
 
