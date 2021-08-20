@@ -48,7 +48,7 @@ class AIOKafkaHandler:
     async def send(self, data: Tuple[str, str]):
         """Encode data to utf-8 and send it to the producer"""
         try:
-            key = data[0].encode("utf-8") if data[1] else None
+            key = data[0].encode("utf-8") if data[0] else None
             value = data[1].encode("utf-8")
             try:
                 await self.producer.send_and_wait(self.conf.output_topic, value, key)
@@ -57,6 +57,12 @@ class AIOKafkaHandler:
         except Exception as err:
             log.error(f"Cannot format message to bytes: {data}")
             log.error(repr(err))
+
+    async def send_dlq(self, msg: ConsumerRecord):
+        try:
+            await self.producer.send_and_wait(self.conf.dlq_topic, msg.value, msg.key)
+        except Exception as error_topic_exc:
+            log.exception(error_topic_exc)
 
     async def produce(self, iterable: AsyncIterable):
         async for data in iterable:
@@ -68,22 +74,19 @@ class AIOKafkaHandler:
         return await self.producer.stop()
 
     async def process(self, func: Callable):
-        failed_topic = f"error.{self.conf.input_topic}.{self.conf.consumer.group_id}"
         log.info(f"{self.conf.input_topic} -> {self.conf.output_topic}")
         # consume messages
         msg: ConsumerRecord
         async for msg in self.consumer:
-            log.debug(f"Received message: {msg.key}")
+            log.debug(f"Consumed: {msg.key}: {msg.value[:80]}")
             try:
                 result: Tuple[str, str] = func(msg)
                 await self.send(result)
-                log.debug(f"Sent message: {msg.key}")
+                log.debug(f"Produced: {msg.key}: {msg.value[:80]}")
             except Exception as err:
-                log.exception(err)
-                try:
-                    await self.producer.send_and_wait(failed_topic, msg.value, msg.key)
-                except Exception as error_topic_exc:
-                    log.exception(error_topic_exc)
+                log.error(repr(err))
+                if self.conf.send_errors_to_dlq:
+                    await self.send_dlq(msg)
 
     def __exit__(self):
         self.stop_consuming()

@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   zoo1:
-    image: zookeeper:latest
+    image: zookeeper:3.6.2
     hostname: zoo1
     environment:
       ZOO_MY_ID: 1
@@ -9,7 +9,7 @@ services:
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181
 
   kafka1:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:5.5.2
     hostname: kafka1
     ports:
       - "9092:9092"
@@ -25,7 +25,7 @@ services:
       - zoo1
 
   kafdrop:
-    image: obsidiandynamics/kafdrop:latest
+    image: obsidiandynamics/kafdrop:3.27.0
     ports:
       - "8090:9000"
     environment:
@@ -34,7 +34,7 @@ services:
       - kafka1
 
   letters-data-loader:
-    image: confluentinc/cp-kafkacat:latest
+    image: confluentinc/cp-kafkacat:5.5.2
     entrypoint: ["/bin/bash", "-c"]
     environment:
       KAFKA_INPUT_TOPIC: ${kafka_input_topic:-test_input}

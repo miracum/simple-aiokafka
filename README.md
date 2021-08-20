@@ -48,8 +48,11 @@ await kh.produce(generate_message())
 ~~~
 
 ### Processor
+A processor receives only a function that is executed on each incoming message on the consumer topic.
+The result is sent to the producer topic.
 ~~~python
 from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+
 def process_message(msg: ConsumerRecord):
     return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
 
@@ -61,26 +64,33 @@ await kh.process(process_message)
 
 
 ## Decorator Style API
+To write even less boilerplate code, one can use the decorator API, similar to Spring Boot.
+
+The Producer must be a Generator function that yields a tuple of strings.
+These are passed to the AIOKafkaHandler.send method as key and value.
+
 ~~~python
-from typing import Tuple
+from typing import Tuple, AsyncIterator
 from aiokafka_handler.kafka_handler import (
     kafka_consumer, kafka_producer, kafka_processor, ConsumerRecord
 )
 
-@kafka_consumer("processor_topic")
-async def consume(msg: ConsumerRecord = None):
-    print("Consume Message:", msg)
+# Producer
+@kafka_producer(output_topic="producer_topic")
+async def produce() -> AsyncIterator[Tuple[str, str]]:
+    for i in range(100):
+        yield str(i), f"Message {i}"
+        await asyncio.sleep(1)
 
+# Processor
 @kafka_processor(input_topic="producer_topic", output_topic="processor_topic")
 async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
     return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
 
-
-@kafka_producer("producer_topic")
-async def produce() -> Tuple[str, str]:
-    for i in range(100):
-        yield str(i), f"Message {i}"
-        await asyncio.sleep(1)
+# Consumer
+@kafka_consumer(input_topic="processor_topic")
+async def consume(msg: ConsumerRecord = None):
+    print("Consume Message:", msg)
 ~~~
 
 For a full example see [example_decorators.py](example_decorators.py).

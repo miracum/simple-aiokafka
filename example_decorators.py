@@ -1,5 +1,5 @@
 import asyncio
-from typing import Tuple
+from typing import Tuple, AsyncGenerator
 from aiokafka_handler.kafka_handler import kafka_consumer, kafka_producer
 from aiokafka_handler.kafka_handler import kafka_processor, ConsumerRecord
 
@@ -15,7 +15,7 @@ async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
 
 
 @kafka_producer("producer_topic")
-async def produce() -> Tuple[str, str]:
+async def produce() -> AsyncGenerator[Tuple[str, str]]:
     for i in range(100):
         yield str(i), f"Message {i}"
         await asyncio.sleep(1)

@@ -32,6 +32,8 @@ class KafkaSettings(BaseSettings):
     output_topic: str = "test_output"
     bootstrap_servers: str = "localhost:9092"
     max_message_size_bytes: int = 5242880
+    send_errors_to_dlq: bool = True
+    dlq_topic: str = "error." + input_topic
 
     # SSL Settings
     security_protocol: str = "PLAINTEXT"
