@@ -19,20 +19,20 @@ async def main():
     # Producer
     # generate_message -> dummy_topic
     producer = AIOKafkaHandler()
-    await producer.init_producer("dummy_topic")
+    await producer.init_producer("producer_topic")
     asyncio.create_task(producer.produce(generate_message()))
 
     # Processor
     # dummy_topic -> Processor -> process_message -> dummy_output_topic
-    processor = AIOKafkaHandler()
-    await processor.init_consumer("dummy_topic")
-    await processor.init_producer("dummy_output_topic")
+    processor = await AIOKafkaHandler()
+    await processor.init_consumer("producer_topic")
+    await processor.init_producer("processor_topic")
     asyncio.create_task(processor.process(process_message))
 
     # Consumer
     # dummy_output_topic -> print
     consumer = AIOKafkaHandler()
-    await consumer.init_consumer("dummy_output_topic")
+    await consumer.init_consumer("processor_topic")
     async for msg in consumer.consumer:
         print(msg)
 

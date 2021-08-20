@@ -1,12 +1,12 @@
 # AIOKafkaHandler
-AIOKafkaHandler is a simple wrapper for the great [AIOKafka](https://github.com/aio-libs/aiokafka) library using [pydantic](https://github.com/samuelcolvin/pydantic) for configuration.
-It provides a convenient interface for Kafka Consumer, Producer and Processors.
+AIOKafkaHandler is a simple wrapper for the [AIOKafka](https://github.com/aio-libs/aiokafka) library using [pydantic](https://github.com/samuelcolvin/pydantic) for easy configuration parsing.
+It provides a convenient interface for Kafka Consumers, Producers and Processors.
 
 
 ## Classic API
 
 Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processor and start processing!
-For a full example see [example_classic.py](example_classic.py).
+For examples see [examples/classic_api.py](examples/classic_api.py).
 
 ### Consumer
 ~~~python
@@ -19,14 +19,14 @@ async for msg in kh.consumer:
 ~~~
 
 ### Producer
-
+Simply call `AIOKafkaHandler.send((key, value))` in your loop:
 ~~~python
 from aiokafka_handler.kafka_handler import AIOKafkaHandler
 
 kh = AIOKafkaHandler()
 await kh.init_producer()
 for i in range(10):
-    kh.send(data=(str(i), "Value"))
+    await kh.send(data=(str(i), "Value"))
 ~~~
 
 or pass an __AsyncIterator__ object to `AioKafkaHandler.produce`:
@@ -77,7 +77,7 @@ from aiokafka_handler.kafka_handler import (
 
 # Producer
 @kafka_producer(output_topic="producer_topic")
-async def produce() -> AsyncIterator[Tuple[str, str]]:
+async def produce() -> AsyncIterator[Tuple[str, str], None]:
     for i in range(100):
         yield str(i), f"Message {i}"
         await asyncio.sleep(1)
@@ -93,7 +93,7 @@ async def consume(msg: ConsumerRecord = None):
     print("Consume Message:", msg)
 ~~~
 
-For a full example see [example_decorators.py](example_decorators.py).
+For a full example see [examples/decorator_api.py](examples/decorator_api.py).
 
 ### Configure
 Set your variables via `export` or in your `.env` file.
