@@ -35,11 +35,9 @@ or pass an __AsyncIterator__ object to `AioKafkaHandler.produce`:
 
 ~~~python
 import asyncio
-from typing import Tuple, AsyncIterator
-from simple_aiokafka import SimpleProducer, ConsumerRecord
+from simple_aiokafka import SimpleProducer
 
-
-async def generate_message() -> AsyncIterator[Tuple[str, str]]:
+async def generate_message():
     n = 0
     while True:
         yield str(n), f"Message {n}"
@@ -59,10 +57,8 @@ The result is sent to the producer topic.
 ~~~python
 from simple_aiokafka import SimpleProcessor, ConsumerRecord
 
-
 def process_message(msg: ConsumerRecord):
-    return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
-
+    return msg.key, f"{msg.value}: Hello Kafka :)"
 
 processor = SimpleProcessor()
 await processor.init(input_topic="dummy_topic", output_topic="dummy_output_topic")
@@ -76,49 +72,41 @@ To write even less boilerplate code, one can use the decorator API, similar to S
 The Producer must be a Generator function that yields a tuple of strings.
 These are passed to the AIOKafkaHandler.send method as key and value.
 
+Import the relevant decorator:
 ~~~python
 from typing import Tuple, AsyncIterator
 from simple_aiokafka import (
     kafka_consumer, kafka_producer, kafka_processor, ConsumerRecord
 )
+~~~
 
-
-# SimpleProducer
-@kafka_producer(output_topic="producer_topic")
-async def produce() -> AsyncIterator[Tuple[str, str], None]:
-    for i in range(100):
-        yield str(i), f"Message {i}"
-        await asyncio.sleep(1)
-
-
-# SimpleProcessor
-@kafka_processor(input_topic="producer_topic", output_topic="processor_topic")
-async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
-    return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
-
-
-# SimpleConsumer
+#### Consumer
+~~~python
 @kafka_consumer(input_topic="processor_topic")
 async def consume(msg: ConsumerRecord = None):
     print("Consume Message:", msg)
 ~~~
 
-For a full example see [examples/decorator_api.py](examples/decorator_api.py).
-
-### Configuration
-
-One can set congiuration variables via `export` or in your `.env` file.
-These will be read by pydantic and stored in the `conf` object of your Consumer/Producer/Processor.
-
-Otherwise the settings can be modified by setting the relevant value in the conf object:
-
+#### Producer
 ~~~python
-consumer = Consumer()
-consumer.conf.consumer.group_id = "my_group_id"
+@kafka_producer(output_topic="producer_topic")
+async def produce() -> AsyncIterator[Tuple[str, str], None]:
+    for i in range(100):
+        yield str(i), f"Message {i}"
+        await asyncio.sleep(1)
 ~~~
 
-For all options see [aiokafka_handler/kafka_settings.py](simple_aiokafka/kafka_settings.py).
+#### Processor
+~~~python
+@kafka_processor(input_topic="producer_topic", output_topic="processor_topic")
+async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
+    return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
+~~~
+For a full example see [examples/decorator_api.py](examples/decorator_api.py).
 
+## Configuration
+One can set configuration variables via `export` or in the `.env` file.
+These will be read by pydantic and stored in the `conf` object of your Consumer/Producer/Processor.
 ~~~bash
 # Kafka settings
 kafka_bootstrap_servers=localhost:9092
@@ -127,6 +115,41 @@ kafka_output_topic=test.output
 kafka_consumer_group_id=aiokafka_handler
 ~~~
 
+Otherwise, the settings can be modified by setting the relevant value in the conf object:
+
+~~~python
+consumer = SimpleConsumer()
+consumer.conf.consumer.group_id = "my_group_id"
+
+producer = SimpleProducer()
+producer.conf.producer.key_serializer = lambda x: str(x).encode()
+
+processor = SimpleProcessor()
+processor.conf.consumer.key_deserializer = lambda x: int(bytes.decode(x))
+processor.conf.producer.key_serializer = lambda x: str(x * 10).encode()
+~~~
+
+Settings for the underlying AIOKafka Client object can also be passed to the `init()` method of a
+SimpleConsumer/SimpleProducer/SimpleProcessor:
+~~~python
+consumer = SimpleConsumer()
+consumer.init(max_poll_records=10)
+~~~
+
+For all options see [aiokafka_handler/kafka_settings.py](simple_aiokafka/kafka_settings.py).
+
+
+## Serialization
+By default the Consumer de-serializes keys and values with `bytes.decode` and the Producer serializes with `str.encode`.
+
+These defaults can be changed by setting them on the conf object
+~~~python
+producer.conf.producer.key_serializer = lambda x: str(x).encode()
+# or
+consumer.conf.consumer.key_deserializer = lambda x: int(bytes.decode(x))
+~~~
+
+or by passing the respective key + value to the `init()` method.
 
 ## Development
 ### Install Requirements

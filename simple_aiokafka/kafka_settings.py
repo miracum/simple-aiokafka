@@ -1,4 +1,6 @@
 from os import path
+from typing import Callable
+
 from aiokafka.helpers import create_ssl_context
 from pydantic import BaseSettings, validator
 
@@ -10,8 +12,9 @@ class KafkaConsumerSettings(BaseSettings):
     max_poll_interval_ms: int = 600_000  # 10 minutes
     heartbeat_interval_ms: int = 3000
     auto_offset_reset: str = "earliest"
-    max_message_size_bytes: int = 5242880
     group_id: str = "SimpleAIOKafka"
+    key_deserializer: Callable = bytes.decode
+    value_deserializer: Callable = bytes.decode
 
     class Config:
         env_prefix = "kafka_consumer_"
@@ -20,7 +23,8 @@ class KafkaConsumerSettings(BaseSettings):
 class KafkaProducerSettings(BaseSettings):
     compression_type: str = "gzip"
     max_request_size: int = 5242880
-    topic: str = "test.output"
+    key_serializer: Callable = str.encode
+    value_serializer: Callable = str.encode
 
     class Config:
         env_prefix = "kafka_producer_"
@@ -30,8 +34,8 @@ class KafkaSettings(BaseSettings):
     consumer = KafkaConsumerSettings()
     producer = KafkaProducerSettings()
     log_level: str = "warning"
-    input_topic: str = "test_input"
-    output_topic: str = "test_output"
+    input_topic: str = "aiokafka.input"
+    output_topic: str = "aiokafka.output"
     bootstrap_servers: str = "localhost:9092"
     send_errors_to_dlq: bool = True
     dlq_topic: str = f"error.{input_topic}.{consumer.group_id}"

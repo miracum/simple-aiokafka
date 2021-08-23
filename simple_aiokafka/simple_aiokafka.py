@@ -1,78 +1,80 @@
 import asyncio
 import functools
-from typing import Callable, Tuple, AsyncIterable
+from typing import Callable, Tuple, AsyncIterable, Any
 import aiokafka
 import logging
 from aiokafka.structs import ConsumerRecord
-from simple_aiokafka.kafka_settings import (
-    SimpleConsumerSettings,
-    SimpleProducerSettings,
-    KafkaSettings,
-)
+from simple_aiokafka.kafka_settings import KafkaSettings
 
 log = logging.getLogger()
 
 
 class SimpleConsumer:
-    def __init__(self, **kwargs):
-        self.conf = SimpleConsumerSettings()
+    def __init__(self, conf: KafkaSettings = None):
+        self.conf = conf or KafkaSettings()
         self.consumer: aiokafka.AIOKafkaConsumer = None
         # Set logging level from config variable 'kafka_log_level'
         logging.basicConfig(level=logging.getLevelName(self.conf.log_level.upper()))
+        log.debug(self.conf)
 
-    async def init(self, input_topic: str = None):
-        """Initiate AIOKafkaConsumer instance with pydantic conf"""
-        if input_topic is not None:
+    async def init(self, input_topic: str = None, **kwargs):
+        """Initialize AIOKafkaConsumer instance with pydantic settings"""
+
+        # Permanently overwrite input_topic in KafkaSettings if given in args
+        if input_topic:
             self.conf.input_topic = input_topic
-        self.consumer = aiokafka.AIOKafkaConsumer(
-            self.conf.input_topic,
-            loop=asyncio.get_event_loop(),
+
+        # Create context dictionary for the AIOKafkaConsumer args
+        # The defaults from KafkaSettings are overwritten by **kwargs
+        context = {
+            "loop": asyncio.get_event_loop(),
             **self.conf.get_connection_context(),
             **self.conf.consumer.dict(),
-        )
+            **kwargs,
+        }
+
+        # Instantiate AIOKafkaConsumer with context
+        self.consumer = aiokafka.AIOKafkaConsumer(self.conf.input_topic, **context)
         await self.consumer.start()
-        log.info(f"Started KafkaConsumer: {self.conf.input_topic}")
+        log.info(f"Initialized SimpleConsumer: {self.conf.output_topic}")
 
     async def stop(self):
+        """Proxy method to AIOKafkaConsumer.stop()"""
         return await self.consumer.stop()
 
 
 class SimpleProducer:
-    def __init__(self):
-        self.conf = SimpleProducerSettings()
+    def __init__(self, conf: KafkaSettings = None):
+        self.conf = conf or KafkaSettings()
         self.producer: aiokafka.AIOKafkaProducer = None
         self.producer_task: asyncio.Task = None
-        logging.basicConfig(level=logging.getLevelName(self.conf.log_level.upper()))
 
-    async def init(self, output_topic: str = None):
+    async def init(self, output_topic: str = None, **kwargs):
         """Initiate AIOKafkaProducer instance with pydantic conf"""
-        if output_topic is not None:
-            self.conf.topic = output_topic
-        print(self.conf.dict())
-        self.producer = aiokafka.AIOKafkaProducer(
-            loop=asyncio.get_event_loop(),
+        if output_topic:
+            self.conf.output_topic = output_topic
+
+        context = {
+            "loop": asyncio.get_event_loop(),
             **self.conf.get_connection_context(),
-            **self.conf.dict(),
-        )
+            **self.conf.producer.dict(),
+            **kwargs,
+        }
+
+        self.producer = aiokafka.AIOKafkaProducer(**context)
         await self.producer.start()
-        log.info(f"Initiated Kafka Producer: {self.conf.topic}")
+        log.info(f"Initiated Kafka Producer: {self.conf.output_topic}")
 
     async def stop(self):
         self.producer_task.cancel()
         return await self.producer.stop()
 
-    async def send(self, data: Tuple[str, str]):
-        """Encode data to utf-8 and send it to the producer"""
+    async def send(self, data: Tuple[Any, Any]):
+        """Proxy to AIOKafkaProducer.send_and_wait, but catches errors"""
         try:
-            key = data[0].encode("utf-8") if data[0] else None
-            value = data[1].encode("utf-8")
-            try:
-                await self.producer.send_and_wait(self.conf.topic, value, key)
-            except Exception as err:
-                log.exception(err)
+            await self.producer.send_and_wait(self.conf.output_topic, data[1], data[0])
         except Exception as err:
-            log.error(f"Cannot format message to bytes: {data}")
-            log.error(repr(err))
+            log.exception(err)
 
     async def produce(self, iterable: AsyncIterable):
         async def producer_task():
@@ -85,22 +87,28 @@ class SimpleProducer:
 class SimpleProcessor:
     def __init__(self):
         self.conf = KafkaSettings()
+        self.consumer = SimpleConsumer(self.conf)
+        self.producer = SimpleProducer(self.conf)
         self.producer_task: asyncio.Task = None
-        self.consumer = SimpleConsumer()
-        self.producer = SimpleProducer()
-        # Set logging level from config variable 'kafka_log_level'
         logging.basicConfig(level=logging.getLevelName(self.conf.log_level.upper()))
 
-    async def init(self, input_topic: str = None, output_topic: str = None):
-        await self.consumer.init(input_topic)
-        await self.producer.init(output_topic)
+    async def init(
+        self,
+        input_topic: str = None,
+        output_topic: str = None,
+        consumer_args: dict = None,
+        producer_args: dict = None,
+    ):
+        await self.consumer.init(input_topic, **consumer_args or {})
+        await self.producer.init(output_topic, **producer_args or {})
+        log.info("Initialized SimpleProcessor")
 
     async def stop(self):
         await self.consumer.stop()
         await self.consumer.stop()
 
     async def process(self, func: Callable):
-        log.info(f"{self.conf.input_topic} -> {self.conf.topic}")
+        log.info(f"{self.conf.input_topic} -> {self.conf.output_topic}")
 
         async for msg in self.consumer.consumer:
             log.debug(f"Consumed: {msg.key}: {msg.value[:80]}")
@@ -116,19 +124,18 @@ class SimpleProcessor:
     async def send_dlq(self, msg: ConsumerRecord):
         try:
             await self.producer.producer.send_and_wait(
-                self.settings.dlq_topic, msg.value, msg.key
+                self.conf.dlq_topic, msg.value, msg.key
             )
         except Exception as error_topic_exc:
             log.exception(error_topic_exc)
 
 
-def kafka_consumer(input_topic: str = None) -> Callable:
+def kafka_consumer(input_topic: str = None, **kwargs) -> Callable:
     def wrapper(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapped():
             consumer = SimpleConsumer()
-            await consumer.init(input_topic)
-            print("asdasdasd", consumer.consumer)
+            await consumer.init(input_topic, **kwargs)
             async for msg in consumer.consumer:
                 await func(msg)
             return await consumer.stop()
@@ -138,13 +145,18 @@ def kafka_consumer(input_topic: str = None) -> Callable:
     return wrapper
 
 
-def kafka_processor(input_topic: str = None, output_topic: str = None) -> Callable:
+def kafka_processor(
+    input_topic: str = None,
+    output_topic: str = None,
+    producer_args: dict = None,
+    consumer_args: dict = None,
+) -> Callable:
     def wrapper(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapped(*args):
             processor = SimpleProcessor()
-            await processor.consumer.init(input_topic)
-            await processor.producer.init(output_topic)
+            await processor.consumer.init(input_topic, **consumer_args or {})
+            await processor.producer.init(output_topic, **producer_args or {})
             async for msg in processor.consumer.consumer:
                 data = await func(msg)
                 await processor.producer.send(data=data)
@@ -155,12 +167,12 @@ def kafka_processor(input_topic: str = None, output_topic: str = None) -> Callab
     return wrapper
 
 
-def kafka_producer(output_topic: str = None) -> Callable:
+def kafka_producer(output_topic: str = None, **kwargs) -> Callable:
     def wrapper(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapped():
             producer = SimpleProducer()
-            await producer.init(output_topic)
+            await producer.init(output_topic, **kwargs)
             await producer.produce(func())
 
         return wrapped

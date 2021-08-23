@@ -2,23 +2,41 @@ import asyncio
 from typing import Tuple, AsyncGenerator
 from simple_aiokafka import kafka_consumer, kafka_producer
 from simple_aiokafka import kafka_processor, ConsumerRecord
+from pydantic import BaseModel
 
 
-@kafka_consumer("processor_topic")
+class Document(BaseModel):
+    text: str
+    id: int
+    note: str = None
+
+
+def document_serializer(document: Document):
+    return document.json().encode()
+
+
+@kafka_producer(value_serializer=document_serializer)
+async def produce() -> AsyncGenerator[Tuple[str, Document], None]:
+    for i in range(100):
+        yield str(i), Document(text="Hello Kafka", id=i)
+        await asyncio.sleep(1)
+
+
+@kafka_consumer("aiokafka.result", value_deserializer=Document.parse_raw)
 async def consume(msg: ConsumerRecord = None) -> None:
     print("Consume Message:", msg)
 
 
-@kafka_processor(input_topic="producer_topic", output_topic="processor_topic")
+@kafka_processor(
+    input_topic="aiokafka.output",
+    output_topic="aiokafka.result",
+    consumer_args={"value_deserializer": Document.parse_raw},
+    producer_args={"value_serializer": document_serializer},
+)
 async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
-    return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
-
-
-@kafka_producer("producer_topic")
-async def produce() -> AsyncGenerator[Tuple[str, str], None]:
-    for i in range(100):
-        yield str(i), f"Message {i}"
-        await asyncio.sleep(1)
+    document = msg.value
+    document.note = "Hello Kafka :)"
+    return msg.key, document
 
 
 async def main():
