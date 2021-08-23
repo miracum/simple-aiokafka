@@ -102,15 +102,11 @@ For all options see [aiokafka_handler/kafka_settings.py](aiokafka_handler/kafka_
 ~~~bash
 # Kafka settings
 kafka_bootstrap_servers=localhost:9092
-kafka_input_topic=input_test
-kafka_output_topic=input_test
+kafka_input_topic=test.input
+kafka_output_topic=test.output
 kafka_consumer_group_id=aiokafka_handler
 ~~~
 
-### Run
-~~~bash
-python kafka2api/main.py
-~~~
 
 ## Development
 ### Install Requirements
@@ -127,20 +123,20 @@ pre-commit install --hook-type commit-msg
 ```
 
 
-### Test Kafka
-
+### Testing with kafkacat
 Send a message to the input topic. See `kafkacat -X list` for more options.
 
+Send a simple message to Kafka:
 ~~~bash
-tail -n1 mock-data.ndjson | kafkacat -b localhost:9092 \
+echo "Hello Kafka :)" | kafkacat -b localhost:9092 -t input_test -P
+~~~
+
+Send a message using SASL/SSL settings:
+~~~bash
+echo "Hello Kafka :)" | kafkacat -b localhost:9092 \
   -X security.protocol=sasl_plaintext \
   -X sasl.mechanisms=plain \
   -X sasl.username=user \
   -X sasl.password=password \
-  -t input_test -P
-~~~
-
-~~~bash
-tail -n1 mock-data.ndjson | kafkacat -b localhost:9092 \
   -t input_test -P
 ~~~
