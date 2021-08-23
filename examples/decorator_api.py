@@ -1,7 +1,7 @@
 import asyncio
 from typing import Tuple, AsyncGenerator
-from aiokafka_handler.kafka_handler import kafka_consumer, kafka_producer
-from aiokafka_handler.kafka_handler import kafka_processor, ConsumerRecord
+from simple_aiokafka import kafka_consumer, kafka_producer
+from simple_aiokafka import kafka_processor, ConsumerRecord
 
 
 @kafka_consumer("processor_topic")

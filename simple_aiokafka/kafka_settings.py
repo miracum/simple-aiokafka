@@ -10,7 +10,8 @@ class KafkaConsumerSettings(BaseSettings):
     max_poll_interval_ms: int = 600_000  # 10 minutes
     heartbeat_interval_ms: int = 3000
     auto_offset_reset: str = "earliest"
-    group_id: str = "aiokafka_handler"
+    max_message_size_bytes: int = 5242880
+    group_id: str = "SimpleAIOKafka"
 
     class Config:
         env_prefix = "kafka_consumer_"
@@ -18,30 +19,28 @@ class KafkaConsumerSettings(BaseSettings):
 
 class KafkaProducerSettings(BaseSettings):
     compression_type: str = "gzip"
+    max_request_size: int = 5242880
+    topic: str = "test.output"
 
     class Config:
         env_prefix = "kafka_producer_"
 
 
 class KafkaSettings(BaseSettings):
-    log_level: str = "warning"
     consumer = KafkaConsumerSettings()
     producer = KafkaProducerSettings()
-    group_id: str = "aiokafka"
+    log_level: str = "warning"
     input_topic: str = "test_input"
     output_topic: str = "test_output"
     bootstrap_servers: str = "localhost:9092"
-    max_message_size_bytes: int = 5242880
     send_errors_to_dlq: bool = True
     dlq_topic: str = f"error.{input_topic}.{consumer.group_id}"
-
     # SSL Settings
     security_protocol: str = "PLAINTEXT"
     tls_dir: str = "/opt/"
     ssl_cafile: str = path.join(tls_dir, "ca.crt")
     ssl_certfile: str = path.join(tls_dir, "user.crt")
     ssl_keyfile: str = path.join(tls_dir, "user.key")
-
     # SASL Settings
     sasl_plain_username: str = None
     sasl_plain_password: str = None

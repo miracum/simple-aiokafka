@@ -9,31 +9,35 @@ Create an instance of `AIOKafkaHandler`, initiate the consumer/producer/processo
 For examples see [examples/classic_api.py](examples/classic_api.py).
 
 ### Consumer
-~~~python
-from aiokafka_handler.kafka_handler import AIOKafkaHandler
 
-kh = AIOKafkaHandler()
-await kh.init_consumer()
-async for msg in kh.consumer:
+~~~python
+from simple_aiokafka import SimpleConsumer
+
+sc = SimpleConsumer()
+await sc.init()
+async for msg in sc.consumer:
     print(msg)
 ~~~
 
 ### Producer
 Simply call `AIOKafkaHandler.send((key, value))` in your loop:
-~~~python
-from aiokafka_handler.kafka_handler import AIOKafkaHandler
 
-kh = AIOKafkaHandler()
-await kh.init_producer()
+~~~python
+from simple_aiokafka import SimpleProducer
+
+sp = SimpleProducer()
+await sp.init()
 for i in range(10):
-    await kh.send(data=(str(i), "Value"))
+    await sp.send(data=(str(i), "Value"))
 ~~~
 
 or pass an __AsyncIterator__ object to `AioKafkaHandler.produce`:
+
 ~~~python
 import asyncio
 from typing import Tuple, AsyncIterator
-from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+from simple_aiokafka import SimpleProducer, ConsumerRecord
+
 
 async def generate_message() -> AsyncIterator[Tuple[str, str]]:
     n = 0
@@ -42,24 +46,27 @@ async def generate_message() -> AsyncIterator[Tuple[str, str]]:
         n += 1
         await asyncio.sleep(1)
 
-kh = AIOKafkaHandler()
-await kh.init_producer("dummy_topic")
-await kh.produce(generate_message())
+
+sp = SimpleProducer()
+await sp.init("dummy_topic")
+await sp.produce(generate_message())
 ~~~
 
 ### Processor
 A processor receives only a function that is executed on each incoming message on the consumer topic.
 The result is sent to the producer topic.
+
 ~~~python
-from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+from simple_aiokafka import SimpleProcessor, ConsumerRecord
+
 
 def process_message(msg: ConsumerRecord):
     return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
 
-kh = AIOKafkaHandler()
-await kh.init_consumer("dummy_topic")
-await kh.init_producer("dummy_output_topic")
-await kh.process(process_message)
+
+processor = SimpleProcessor()
+await processor.init(input_topic="dummy_topic", output_topic="dummy_output_topic")
+await processor.process(process_message)
 ~~~
 
 
@@ -71,23 +78,26 @@ These are passed to the AIOKafkaHandler.send method as key and value.
 
 ~~~python
 from typing import Tuple, AsyncIterator
-from aiokafka_handler.kafka_handler import (
+from simple_aiokafka import (
     kafka_consumer, kafka_producer, kafka_processor, ConsumerRecord
 )
 
-# Producer
+
+# SimpleProducer
 @kafka_producer(output_topic="producer_topic")
 async def produce() -> AsyncIterator[Tuple[str, str], None]:
     for i in range(100):
         yield str(i), f"Message {i}"
         await asyncio.sleep(1)
 
-# Processor
+
+# SimpleProcessor
 @kafka_processor(input_topic="producer_topic", output_topic="processor_topic")
 async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
     return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
 
-# Consumer
+
+# SimpleConsumer
 @kafka_consumer(input_topic="processor_topic")
 async def consume(msg: ConsumerRecord = None):
     print("Consume Message:", msg)
@@ -95,9 +105,19 @@ async def consume(msg: ConsumerRecord = None):
 
 For a full example see [examples/decorator_api.py](examples/decorator_api.py).
 
-### Configure
-Set your variables via `export` or in your `.env` file.
-For all options see [aiokafka_handler/kafka_settings.py](aiokafka_handler/kafka_settings.py).
+### Configuration
+
+One can set congiuration variables via `export` or in your `.env` file.
+These will be read by pydantic and stored in the `conf` object of your Consumer/Producer/Processor.
+
+Otherwise the settings can be modified by setting the relevant value in the conf object:
+
+~~~python
+consumer = Consumer()
+consumer.conf.consumer.group_id = "my_group_id"
+~~~
+
+For all options see [aiokafka_handler/kafka_settings.py](simple_aiokafka/kafka_settings.py).
 
 ~~~bash
 # Kafka settings

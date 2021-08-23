@@ -1,6 +1,11 @@
 import asyncio
 from typing import Tuple, AsyncIterator
-from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+from simple_aiokafka import (
+    SimpleConsumer,
+    SimpleProducer,
+    SimpleProcessor,
+    ConsumerRecord,
+)
 
 
 def process_message(msg: ConsumerRecord):
@@ -16,23 +21,22 @@ async def generate_message() -> AsyncIterator[Tuple[str, str]]:
 
 
 async def main():
-    # Producer
+    # SimpleProducer
     # generate_message -> dummy_topic
-    producer = AIOKafkaHandler()
-    await producer.init_producer("producer_topic")
+    producer = SimpleProducer()
+    await producer.init("producer_topic")
     asyncio.create_task(producer.produce(generate_message()))
 
-    # Processor
-    # dummy_topic -> Processor -> process_message -> dummy_output_topic
-    processor = await AIOKafkaHandler()
-    await processor.init_consumer("producer_topic")
-    await processor.init_producer("processor_topic")
+    # SimpleProcessor
+    # dummy_topic -> SimpleProcessor -> process_message -> dummy_output_topic
+    processor = SimpleProcessor()
+    await processor.init(input_topic="producer_topic", output_topic="processor_topic")
     asyncio.create_task(processor.process(process_message))
 
-    # Consumer
+    # SimpleConsumer
     # dummy_output_topic -> print
-    consumer = AIOKafkaHandler()
-    await consumer.init_consumer("processor_topic")
+    consumer = SimpleConsumer()
+    await consumer.init("processor_topic")
     async for msg in consumer.consumer:
         print(msg)
 
