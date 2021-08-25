@@ -2,7 +2,7 @@ import ssl
 
 from aiokafka.helpers import create_ssl_context
 
-import simple_aiokafka
+import simple_aiokafka.simple_aiokafka
 from simple_aiokafka.kafka_settings import KafkaSettings
 
 
