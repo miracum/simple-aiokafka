@@ -11,11 +11,11 @@ def load_requirements(fname):
 
 
 setup(
-    name="aiokafka_handler",
+    name="simple_aiokafka",
     description="Simplified API to AIOKafka using pydantic for configuration",
     version="0.0.1",
     url="",
-    package_dir={"aiokafka_handler": "aiokafka_handler"},
+    package_dir={"simple_aiokafka": "simple_aiokafka"},
     packages=find_packages(exclude=["test*"]),
     include_package_data=True,
     install_requires=load_requirements("requirements.txt"),
