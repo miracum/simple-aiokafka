@@ -1,8 +1,27 @@
-from os import path
+import os
+from enum import Enum
 from typing import Callable
 
 from aiokafka.helpers import create_ssl_context
 from pydantic import BaseSettings, validator
+
+pydantic_env_file = os.getenv(
+    "PYDANTIC_ENV_FILE",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+)
+
+
+class SecurityProtocolEnum(str, Enum):
+    plaintext = "PLAINTEXT"
+    ssl = "SASL_SSL"
+
+
+class SaslMechanismEnum(str, Enum):
+    plain = "PLAIN"
+    gssapi = "GSSAPI"
+    scram_sha_256 = "SCRAM-SHA-256"
+    scram_sha_512 = "SCRAM-SHA-512"
+    oauthbearer = "OAUTHBEARER"
 
 
 class KafkaConsumerSettings(BaseSettings):
@@ -40,19 +59,19 @@ class KafkaSettings(BaseSettings):
     send_errors_to_dlq: bool = True
     dlq_topic: str = f"error.{input_topic}.{consumer.group_id}"
     # SSL Settings
-    security_protocol: str = "PLAINTEXT"
+    security_protocol: SecurityProtocolEnum = SecurityProtocolEnum.plaintext
     tls_dir: str = "/opt/"
-    ssl_cafile: str = path.join(tls_dir, "ca.crt")
-    ssl_certfile: str = path.join(tls_dir, "user.crt")
-    ssl_keyfile: str = path.join(tls_dir, "user.key")
+    ssl_cafile: str = os.path.join(tls_dir, "ca.crt")
+    ssl_certfile: str = os.path.join(tls_dir, "user.crt")
+    ssl_keyfile: str = os.path.join(tls_dir, "user.key")
     # SASL Settings
     sasl_plain_username: str = None
     sasl_plain_password: str = None
-    sasl_mechanism: str = None
+    sasl_mechanism: SaslMechanismEnum = None
 
     class Config:
         env_prefix = "kafka_"
-        env_file = path.join(path.dirname(path.dirname(__file__)), ".env")
+        env_file = pydantic_env_file
 
     def get_ssl_context(self):
         if self.security_protocol != "PLAINTEXT":

@@ -1,9 +1,11 @@
 import asyncio
 import functools
-from typing import Callable, Tuple, AsyncIterable, Any
-import aiokafka
 import logging
+from typing import Any, AsyncIterable, Callable, Tuple
+
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from aiokafka.structs import ConsumerRecord
+
 from simple_aiokafka.kafka_settings import KafkaSettings
 
 log = logging.getLogger()
@@ -12,7 +14,7 @@ log = logging.getLogger()
 class SimpleConsumer:
     def __init__(self, conf: KafkaSettings = None):
         self.conf = conf or KafkaSettings()
-        self.consumer: aiokafka.AIOKafkaConsumer = None
+        self.consumer: AIOKafkaConsumer = None
         # Set logging level from config variable 'kafka_log_level'
         logging.basicConfig(level=logging.getLevelName(self.conf.log_level.upper()))
         log.debug(self.conf)
@@ -34,7 +36,7 @@ class SimpleConsumer:
         }
 
         # Instantiate AIOKafkaConsumer with context
-        self.consumer = aiokafka.AIOKafkaConsumer(self.conf.input_topic, **context)
+        self.consumer = AIOKafkaConsumer(self.conf.input_topic, **context)
         await self.consumer.start()
         log.info(f"Initialized SimpleConsumer: {self.conf.output_topic}")
 
@@ -46,7 +48,7 @@ class SimpleConsumer:
 class SimpleProducer:
     def __init__(self, conf: KafkaSettings = None):
         self.conf = conf or KafkaSettings()
-        self.producer: aiokafka.AIOKafkaProducer = None
+        self.producer: AIOKafkaProducer = None
         self.producer_task: asyncio.Task = None
 
     async def init(self, output_topic: str = None, **kwargs):
@@ -61,7 +63,7 @@ class SimpleProducer:
             **kwargs,
         }
 
-        self.producer = aiokafka.AIOKafkaProducer(**context)
+        self.producer = AIOKafkaProducer(**context)
         await self.producer.start()
         log.info(f"Initiated Kafka Producer: {self.conf.output_topic}")
 
