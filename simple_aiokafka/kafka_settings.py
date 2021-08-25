@@ -5,11 +5,6 @@ from typing import Callable
 from aiokafka.helpers import create_ssl_context
 from pydantic import BaseSettings, validator
 
-pydantic_env_file = os.getenv(
-    "PYDANTIC_ENV_FILE",
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
-)
-
 
 class SecurityProtocolEnum(str, Enum):
     plaintext = "PLAINTEXT"
@@ -71,7 +66,10 @@ class KafkaSettings(BaseSettings):
 
     class Config:
         env_prefix = "kafka_"
-        env_file = pydantic_env_file
+        env_file = os.getenv(
+            "PYDANTIC_ENV_FILE",
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        )
 
     def get_ssl_context(self):
         if self.security_protocol != "PLAINTEXT":
@@ -98,3 +96,7 @@ class KafkaSettings(BaseSettings):
     @validator("ssl_cafile", "ssl_certfile", "ssl_keyfile")
     def parse_to_none(cls, v):
         return None if v in ["", "None", 0, False] else v
+
+
+c = KafkaSettings()
+print(c)

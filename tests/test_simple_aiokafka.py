@@ -1,3 +1,4 @@
+import os
 import ssl
 
 from aiokafka.helpers import create_ssl_context
@@ -34,6 +35,12 @@ test_connection_context = {
     "sasl_plain_password": "testpw",
     "sasl_mechanism": "SASL_PLAIN",
 }
+
+
+def test_settings_env_file():
+    os.environ["PYDANTIC_ENV_FILE"] = ".env.development"
+    conf = KafkaSettings()
+    assert conf.log_level == "debug"
 
 
 def test_settings():
