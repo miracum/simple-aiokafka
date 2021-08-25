@@ -1,38 +1,48 @@
 import asyncio
 from typing import Tuple, AsyncIterator
-from aiokafka_handler.kafka_handler import AIOKafkaHandler, ConsumerRecord
+from simple_aiokafka import (
+    SimpleConsumer,
+    SimpleProducer,
+    SimpleProcessor,
+    ConsumerRecord,
+)
 
 
 def process_message(msg: ConsumerRecord):
-    return str(msg.key.decode()), f"{msg.value.decode()}: Hello Kafka :)"
+    return msg.key, f"{msg.value}: Hello Kafka :)"
 
 
 async def generate_message() -> AsyncIterator[Tuple[str, str]]:
     n = 0
     while True:
-        yield str(n), f"Message {n}"
+        yield n, f"Message {n}"
         n += 1
         await asyncio.sleep(1)
 
 
 async def main():
-    # Producer
     # generate_message -> dummy_topic
-    producer = AIOKafkaHandler()
-    await producer.init_producer("producer_topic")
+    producer = SimpleProducer()
+    # Modify AIOKafkaProducer key_serializer
+    producer.conf.producer.key_serializer = lambda x: str(x).encode()
+    await producer.init("producer_topic")
     asyncio.create_task(producer.produce(generate_message()))
 
-    # Processor
-    # dummy_topic -> Processor -> process_message -> dummy_output_topic
-    processor = await AIOKafkaHandler()
-    await processor.init_consumer("producer_topic")
-    await processor.init_producer("processor_topic")
+    # dummy_topic -> SimpleProcessor -> process_message -> dummy_output_topic
+    processor = SimpleProcessor()
+    processor.conf.consumer.key_deserializer = lambda x: int(bytes.decode(x))
+    processor.conf.producer.key_serializer = lambda x: str(x * 10).encode()
+    await processor.init(
+        input_topic="producer_topic",
+        output_topic="processor_topic",
+    )
     asyncio.create_task(processor.process(process_message))
 
-    # Consumer
     # dummy_output_topic -> print
-    consumer = AIOKafkaHandler()
-    await consumer.init_consumer("processor_topic")
+    consumer = SimpleConsumer()
+    consumer.conf.consumer.key_deserializer = lambda x: int(bytes.decode(x))
+    consumer.conf.consumer.group_id = "MyGroup"
+    await consumer.init("processor_topic")
     async for msg in consumer.consumer:
         print(msg)
 

@@ -119,14 +119,14 @@ venv.bak/
 .env*
 !.env.development
 
-# Spyder project settings
+# Spyder project conf
 .spyderproject
 .spyproject
 
-# Rope project settings
+# Rope project conf
 .ropeproject
 
-# PyCharm settings
+# PyCharm conf
 .idea
 
 # mkdocs documentation

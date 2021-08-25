@@ -1,6 +1,27 @@
-from os import path
+import os
+from enum import Enum
+from typing import Callable
+
 from aiokafka.helpers import create_ssl_context
 from pydantic import BaseSettings, validator
+
+pydantic_env_file = os.getenv(
+    "PYDANTIC_ENV_FILE",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+)
+
+
+class SecurityProtocolEnum(str, Enum):
+    plaintext = "PLAINTEXT"
+    ssl = "SASL_SSL"
+
+
+class SaslMechanismEnum(str, Enum):
+    plain = "PLAIN"
+    gssapi = "GSSAPI"
+    scram_sha_256 = "SCRAM-SHA-256"
+    scram_sha_512 = "SCRAM-SHA-512"
+    oauthbearer = "OAUTHBEARER"
 
 
 class KafkaConsumerSettings(BaseSettings):
@@ -10,7 +31,9 @@ class KafkaConsumerSettings(BaseSettings):
     max_poll_interval_ms: int = 600_000  # 10 minutes
     heartbeat_interval_ms: int = 3000
     auto_offset_reset: str = "earliest"
-    group_id: str = "aiokafka_handler"
+    group_id: str = "SimpleAIOKafka"
+    key_deserializer: Callable = bytes.decode
+    value_deserializer: Callable = bytes.decode
 
     class Config:
         env_prefix = "kafka_consumer_"
@@ -18,38 +41,37 @@ class KafkaConsumerSettings(BaseSettings):
 
 class KafkaProducerSettings(BaseSettings):
     compression_type: str = "gzip"
+    max_request_size: int = 5242880
+    key_serializer: Callable = str.encode
+    value_serializer: Callable = str.encode
 
     class Config:
         env_prefix = "kafka_producer_"
 
 
 class KafkaSettings(BaseSettings):
-    log_level: str = "warning"
     consumer = KafkaConsumerSettings()
     producer = KafkaProducerSettings()
-    group_id: str = "aiokafka"
-    input_topic: str = "test_input"
-    output_topic: str = "test_output"
+    log_level: str = "warning"
+    input_topic: str = "aiokafka.input"
+    output_topic: str = "aiokafka.output"
     bootstrap_servers: str = "localhost:9092"
-    max_message_size_bytes: int = 5242880
     send_errors_to_dlq: bool = True
     dlq_topic: str = f"error.{input_topic}.{consumer.group_id}"
-
     # SSL Settings
-    security_protocol: str = "PLAINTEXT"
+    security_protocol: SecurityProtocolEnum = SecurityProtocolEnum.plaintext
     tls_dir: str = "/opt/"
-    ssl_cafile: str = path.join(tls_dir, "ca.crt")
-    ssl_certfile: str = path.join(tls_dir, "user.crt")
-    ssl_keyfile: str = path.join(tls_dir, "user.key")
-
+    ssl_cafile: str = os.path.join(tls_dir, "ca.crt")
+    ssl_certfile: str = os.path.join(tls_dir, "user.crt")
+    ssl_keyfile: str = os.path.join(tls_dir, "user.key")
     # SASL Settings
     sasl_plain_username: str = None
     sasl_plain_password: str = None
-    sasl_mechanism: str = None
+    sasl_mechanism: SaslMechanismEnum = None
 
     class Config:
         env_prefix = "kafka_"
-        env_file = path.join(path.dirname(path.dirname(__file__)), ".env")
+        env_file = pydantic_env_file
 
     def get_ssl_context(self):
         if self.security_protocol != "PLAINTEXT":

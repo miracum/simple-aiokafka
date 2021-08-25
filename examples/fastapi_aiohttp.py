@@ -5,7 +5,7 @@ import aiohttp
 import uvicorn
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
-from aiokafka_handler.kafka_handler import kafka_consumer, AIOKafkaHandler
+from simple_aiokafka.simple_aiokafka import kafka_consumer, AIOKafkaHandler
 
 """
 # Sending Kafka Messages to an API and vice versa
@@ -13,9 +13,9 @@ from aiokafka_handler.kafka_handler import kafka_consumer, AIOKafkaHandler
 In this example we create a simple function that forwards messages
 from a kafka topic to a rest api.
 The function 'kafka_to_http' creates an aiohttp ClientSession and
-a Kafka Consumer that posts each message's key to the rest api
+a Kafka SimpleConsumer that posts each message's key to the rest api
 using the ClientSession.
-The Kafka Consumer is created using the decorator syntax on a function.
+The Kafka SimpleConsumer is created using the decorator syntax on a function.
 
 On the other side we have a FastAPI endpoint that receives the post requests,
 alters the message and writes it to another topic.
