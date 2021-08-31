@@ -38,7 +38,7 @@ class SimpleConsumer:
         # Instantiate AIOKafkaConsumer with context
         self.consumer = AIOKafkaConsumer(self.conf.input_topic, **context)
         await self.consumer.start()
-        log.info(f"Initialized SimpleConsumer: {self.conf.output_topic}")
+        log.info(f"Initialized Consumer: {self.conf.input_topic}")
 
     async def stop(self):
         """Proxy method to AIOKafkaConsumer.stop()"""
@@ -65,7 +65,7 @@ class SimpleProducer:
 
         self.producer = AIOKafkaProducer(**context)
         await self.producer.start()
-        log.info(f"Initiated Kafka Producer: {self.conf.output_topic}")
+        log.info(f"Initialized Producer: {self.conf.output_topic}")
 
     async def stop(self):
         self.producer_task.cancel()
@@ -79,6 +79,10 @@ class SimpleProducer:
             log.exception(err)
 
     async def produce(self, iterable: AsyncIterable):
+        """
+        Wraps async function around looping over given iterable and creates task
+        """
+
         async def producer_task():
             async for data in iterable:
                 await self.send(data)
@@ -87,8 +91,8 @@ class SimpleProducer:
 
 
 class SimpleProcessor:
-    def __init__(self):
-        self.conf = KafkaSettings()
+    def __init__(self, conf: KafkaSettings = None):
+        self.conf = conf or KafkaSettings()
         self.consumer = SimpleConsumer(self.conf)
         self.producer = SimpleProducer(self.conf)
         self.producer_task: asyncio.Task = None
@@ -103,11 +107,11 @@ class SimpleProcessor:
     ):
         await self.consumer.init(input_topic, **consumer_args or {})
         await self.producer.init(output_topic, **producer_args or {})
-        log.info("Initialized SimpleProcessor")
+        log.info("Initialized Processor")
 
     async def stop(self):
         await self.consumer.stop()
-        await self.consumer.stop()
+        await self.producer.stop()
 
     async def process(self, func: Callable):
         log.info(f"{self.conf.input_topic} -> {self.conf.output_topic}")

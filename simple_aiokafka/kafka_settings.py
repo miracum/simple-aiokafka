@@ -32,6 +32,10 @@ class KafkaConsumerSettings(BaseSettings):
 
     class Config:
         env_prefix = "kafka_consumer_"
+        env_file = os.getenv(
+            "PYDANTIC_ENV_FILE",
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        )
 
 
 class KafkaProducerSettings(BaseSettings):
@@ -42,6 +46,10 @@ class KafkaProducerSettings(BaseSettings):
 
     class Config:
         env_prefix = "kafka_producer_"
+        env_file = os.getenv(
+            "PYDANTIC_ENV_FILE",
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        )
 
 
 class KafkaSettings(BaseSettings):
@@ -96,7 +104,3 @@ class KafkaSettings(BaseSettings):
     @validator("ssl_cafile", "ssl_certfile", "ssl_keyfile")
     def parse_to_none(cls, v):
         return None if v in ["", "None", 0, False] else v
-
-
-c = KafkaSettings()
-print(c)
