@@ -105,6 +105,7 @@ async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
 For a full example see [examples/decorator_api.py](examples/decorator_api.py).
 
 ## Configuration
+### Environment Variables
 One can set configuration variables via `export` or in the `.env` file.
 These will be read by pydantic and stored in the `conf` object of your Consumer/Producer/Processor.
 ~~~bash
@@ -115,7 +116,13 @@ kafka_output_topic=test.output
 kafka_consumer_group_id=aiokafka_handler
 ~~~
 
-Otherwise, the settings can be modified by setting the relevant value in the conf object:
+The path to the `.env` file from which the settings are loaded can be customized by setting the env variable `KAFKA_ENV_FILE`:
+~~~bash
+export KAFKA_ENV_FILE=.env.development
+~~~
+
+### Conf Object
+Otherwise, the settings can be modified by setting the relevant value in the conf object of a consumer/producer/processor:
 
 ~~~python
 consumer = SimpleConsumer()

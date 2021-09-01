@@ -3,8 +3,8 @@ import ssl
 
 from aiokafka.helpers import create_ssl_context
 
-import simple_aiokafka.simple_aiokafka
-from simple_aiokafka.kafka_settings import KafkaSettings
+os.environ["KAFKA_ENV_FILE"] = ".env.development"
+import simple_aiokafka.simple_aiokafka  # noqa: E402
 
 
 def test_simple_consumer():
@@ -39,12 +39,14 @@ test_connection_context = {
 
 def test_settings_env_file():
     os.environ["PYDANTIC_ENV_FILE"] = ".env.development"
-    conf = KafkaSettings()
+    conf = simple_aiokafka.KafkaSettings()
     assert conf.log_level == "debug"
+    assert conf.consumer.group_id == "simple_aiokafka_dev"
+    assert conf.producer.max_request_size == 4194304
 
 
 def test_settings():
-    conf = KafkaSettings()
+    conf = simple_aiokafka.KafkaSettings()
     assert conf.get_ssl_context() is None
 
     conf.bootstrap_servers = "kafka1:9092"

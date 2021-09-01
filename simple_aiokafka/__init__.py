@@ -1,4 +1,11 @@
 # flake8: noqa
-from .simple_aiokafka import SimpleProducer, SimpleConsumer, SimpleProcessor
-from .simple_aiokafka import kafka_consumer, kafka_producer, kafka_processor
-from .simple_aiokafka import ConsumerRecord
+from .kafka_settings import KafkaConsumerSettings, KafkaProducerSettings, KafkaSettings
+from .simple_aiokafka import (
+    ConsumerRecord,
+    SimpleConsumer,
+    SimpleProcessor,
+    SimpleProducer,
+    kafka_consumer,
+    kafka_processor,
+    kafka_producer,
+)
