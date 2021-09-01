@@ -3,6 +3,7 @@ import ssl
 
 from aiokafka.helpers import create_ssl_context
 
+# Set environment variable before module initialisation
 os.environ["KAFKA_ENV_FILE"] = ".env.development"
 import simple_aiokafka.simple_aiokafka  # noqa: E402
 

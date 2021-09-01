@@ -1,4 +1,4 @@
-# AIOKafkaHandler
+# Simple AIOKafka
 AIOKafkaHandler is a simple wrapper for the [AIOKafka](https://github.com/aio-libs/aiokafka) library using [pydantic](https://github.com/samuelcolvin/pydantic) for easy configuration parsing.
 It provides a convenient interface for Kafka Consumers, Producers and Processors.
 
@@ -143,7 +143,32 @@ consumer = SimpleConsumer()
 consumer.init(max_poll_records=10)
 ~~~
 
-For all options see [aiokafka_handler/kafka_settings.py](simple_aiokafka/kafka_settings.py).
+When using the decorator API settings can be passed in the decorator call.
+These are passed directly to the respective AIOKafka class:
+
+~~~py
+@kafka_producer(value_serializer=document_serializer, client_id="myProducer")
+async def produce() -> AsyncGenerator[Tuple[str, Document], None]:
+    ...
+
+
+@kafka_consumer("aiokafka.result", value_deserializer=Document.parse_raw)
+async def consume(msg: ConsumerRecord = None) -> None:
+    ...
+~~~
+
+Use `consumer_args` and `producer_args` to alter the configuration of a processor:
+~~~py
+async def process(msg: ConsumerRecord = None) -> Tuple[str, str]:
+@kafka_processor(
+    input_topic="aiokafka.output",
+    output_topic="aiokafka.result",
+    consumer_args={"value_deserializer": Document.parse_raw},
+    producer_args={"value_serializer": lambda x: str(x).encode()},
+)
+~~~
+
+For all configuration options see [aiokafka_handler/kafka_settings.py](simple_aiokafka/kafka_settings.py) and the [aiokafka docs](https://aiokafka.readthedocs.io/en/stable/api.html).
 
 
 ## Serialization
