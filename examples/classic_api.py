@@ -1,10 +1,11 @@
 import asyncio
-from typing import Tuple, AsyncIterator
+from typing import AsyncIterator, Tuple
+
 from simple_aiokafka import (
-    SimpleConsumer,
-    SimpleProducer,
-    SimpleProcessor,
     ConsumerRecord,
+    SimpleConsumer,
+    SimpleProcessor,
+    SimpleProducer,
 )
 
 
@@ -48,4 +49,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

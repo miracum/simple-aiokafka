@@ -1,8 +1,14 @@
 import asyncio
-from typing import Tuple, AsyncGenerator
-from simple_aiokafka import kafka_consumer, kafka_producer
-from simple_aiokafka import kafka_processor, ConsumerRecord
+from typing import AsyncGenerator, Tuple
+
 from pydantic import BaseModel
+
+from simple_aiokafka import (
+    ConsumerRecord,
+    kafka_consumer,
+    kafka_processor,
+    kafka_producer,
+)
 
 
 class Document(BaseModel):
@@ -46,4 +52,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

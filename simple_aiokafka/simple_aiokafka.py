@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import functools
 import logging
 from typing import Any, AsyncIterable, Callable, Tuple
@@ -10,6 +11,9 @@ from simple_aiokafka.kafka_settings import KafkaSettings
 
 log = logging.getLogger()
 
+global stoppables
+stoppables = []
+
 
 class SimpleConsumer:
     def __init__(self, conf: KafkaSettings = None):
@@ -17,7 +21,7 @@ class SimpleConsumer:
         self.consumer: AIOKafkaConsumer = None
         # Set logging level from config variable 'kafka_log_level'
         logging.basicConfig(level=logging.getLevelName(self.conf.log_level.upper()))
-        log.debug(self.conf)
+        stoppables.append(self)
 
     async def init(self, input_topic: str = None, **kwargs):
         """Initialize AIOKafkaConsumer instance with pydantic settings"""
@@ -42,7 +46,9 @@ class SimpleConsumer:
 
     async def stop(self):
         """Proxy method to AIOKafkaConsumer.stop()"""
-        return await self.consumer.stop()
+        log.info(f"Stopping Consumer: {self.conf.input_topic}")
+        if self.consumer:
+            return await self.consumer.stop()
 
 
 class SimpleProducer:
@@ -50,6 +56,7 @@ class SimpleProducer:
         self.conf = conf or KafkaSettings()
         self.producer: AIOKafkaProducer = None
         self.producer_task: asyncio.Task = None
+        stoppables.append(self)
 
     async def init(self, output_topic: str = None, **kwargs):
         """Initiate AIOKafkaProducer instance with pydantic conf"""
@@ -68,7 +75,9 @@ class SimpleProducer:
         log.info(f"Initialized Producer: {self.conf.output_topic}")
 
     async def stop(self):
-        self.producer_task.cancel()
+        log.info(f"Stopping Producer: {self.conf.output_topic}")
+        if self.producer_task:
+            self.producer_task.cancel()
         return await self.producer.stop()
 
     async def send(self, data: Tuple[Any, Any]):
@@ -144,7 +153,6 @@ def kafka_consumer(input_topic: str = None, **kwargs) -> Callable:
             await consumer.init(input_topic, **kwargs)
             async for msg in consumer.consumer:
                 await func(msg)
-            return await consumer.stop()
 
         return wrapped
 
@@ -166,7 +174,6 @@ def kafka_processor(
             async for msg in processor.consumer.consumer:
                 data = await func(msg)
                 await processor.producer.send(data=data)
-            return await processor.stop()
 
         return wrapped
 
@@ -184,3 +191,15 @@ def kafka_producer(output_topic: str = None, **kwargs) -> Callable:
         return wrapped
 
     return wrapper
+
+
+# Use atexit to stop all Kafka Tasks
+@atexit.register
+def module_exit():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(stop_kafka_tasks())
+
+
+async def stop_kafka_tasks():
+    for s in stoppables:
+        await s.stop()

@@ -1,5 +1,5 @@
 # Simple AIOKafka
-AIOKafkaHandler is a simple wrapper for the [AIOKafka](https://github.com/aio-libs/aiokafka) library using [pydantic](https://github.com/samuelcolvin/pydantic) for easy configuration parsing.
+Simple AIOKafka is a simple wrapper for the [AIOKafka](https://github.com/aio-libs/aiokafka) library using [pydantic](https://github.com/samuelcolvin/pydantic) for easy configuration parsing.
 It provides a convenient interface for Kafka Consumers, Producers and Processors.
 
 
@@ -64,6 +64,11 @@ processor = SimpleProcessor()
 await processor.init(input_topic="dummy_topic", output_topic="dummy_output_topic")
 await processor.process(process_message)
 ~~~
+
+### Asyncio Loop
+For the AIOKafka Clients to cleanly exit either run the main function with `loop.run_until_complete()` or embed them
+into another asynchronous framework, e.g. FastAPI (see [examples/fastapi_aiohttp.py](examples/fastapi_aiohttp.py)).
+
 
 
 ## Decorator Style API

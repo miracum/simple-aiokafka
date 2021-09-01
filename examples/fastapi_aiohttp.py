@@ -1,11 +1,17 @@
 import asyncio
 import json
-from pydantic import BaseModel
+
 import aiohttp
 import uvicorn
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
-from simple_aiokafka.simple_aiokafka import kafka_consumer, AIOKafkaHandler
+from pydantic import BaseModel
+
+from simple_aiokafka.simple_aiokafka import (
+    SimpleConsumer,
+    SimpleProducer,
+    kafka_consumer,
+)
 
 """
 # Sending Kafka Messages to an API and vice versa
@@ -27,7 +33,8 @@ the FastAPI application startup by using 'asyncio.create_task()'
 url = "http://localhost:5000/to_kafka"
 headers = {"Content-Type": "application/json"}
 app = FastAPI()
-kh = AIOKafkaHandler()
+consumer = SimpleConsumer()
+producer = SimpleProducer()
 
 
 class Data(BaseModel):
@@ -48,13 +55,13 @@ async def kafka_to_http():
 @app.post("/to_kafka")
 async def to_kafka(data: Data):
     data.text += ". Forwarded by FastAPI"
-    await kh.send((None, json.dumps(jsonable_encoder(data))))
+    await producer.send((None, json.dumps(jsonable_encoder(data))))
     return data
 
 
 @app.on_event("startup")
 async def startup_event():
-    await kh.init_producer("fastapi_output_topic")
+    await producer.init("fastapi_output_topic")
     asyncio.create_task(kafka_to_http())
 
 
