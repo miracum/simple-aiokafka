@@ -78,7 +78,8 @@ class SimpleProducer:
         log.info(f"Stopping Producer: {self.conf.output_topic}")
         if self.producer_task:
             self.producer_task.cancel()
-        return await self.producer.stop()
+        if self.producer:
+            return await self.producer.stop()
 
     async def send(self, data: Tuple[Any, Any]):
         """Proxy to AIOKafkaProducer.send_and_wait, but catches errors"""
