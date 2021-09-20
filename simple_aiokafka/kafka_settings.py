@@ -72,6 +72,7 @@ class KafkaSettings(BaseSettings):
     class Config:
         env_prefix = "kafka_"
         env_file = env_file
+        use_enum_values = True
 
     def get_ssl_context(self):
         if self.security_protocol != "PLAINTEXT":
